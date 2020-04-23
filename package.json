@@ -9,6 +9,8 @@
     "image-size": "^0.8.3",
     "imagemin": "^7.0.1",
     "imagemin-mozjpeg": "^8.0.0",
+    "minimist": "^1.2.5",
+    "rimraf": "^3.0.2",
     "sharp": "^0.25.2"
   },
   "devDependencies": {

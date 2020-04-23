@@ -1,16 +1,25 @@
 import * as path from "path";
 import { promises as fs } from "fs";
+import {default as minimist} from "minimist";
 import { default as sizeOf } from "image-size";
 import { default as sharp } from "sharp";
 import { default as imagemin } from "imagemin";
 import { default as imageminMozjpeg } from "imagemin-mozjpeg";
 
-let imagePath = path.win32.normalize(process.argv[2]);
-let outputDir = "./rez/";
+//let argv = minimist(process.argv.slice(2));
+
+let justMinify = process.argv[2] == 'minify' ? true : false;
+
+//let imagePath = process.argv[2] ? path.win32.normalize(process.argv[2]) : './imgs';
+
+let imagePath = './imgs';
+let outputDir = justMinify ? "./" : "./rez/";
+
 process.chdir(imagePath);
 
 listFiles(".")
   .then((files) => {
+    cleanUpBefore();
     makeRezDir();
     return files;
   })
@@ -19,6 +28,10 @@ listFiles(".")
     console.error(error);
   })
   .then(() => minifyImages())
+  .catch(function (error) {
+    console.error(error);
+  })
+  .then(() => cleanUpAfter())
   .catch(function (error) {
     console.error(error);
   });
@@ -38,7 +51,8 @@ async function makeRezDir() {
   }
 }
 async function processArray(files) {
-  try {
+  if(!justMinify) {
+    try {
     for (let img of files) {
       var dims = sizeOf(img);
       let settings =
@@ -54,7 +68,7 @@ async function processArray(files) {
     console.log(error);
   }
 }
-
+}
 async function minifyImages() {
   await imagemin([outputDir + "*.jpg"], {
     destination: outputDir + "minified",
@@ -63,4 +77,10 @@ async function minifyImages() {
   //console.log(`minifyImages() function run`);
 }
 
+async function cleanUpBefore() {
+  //TODO: clean up before running script if any dirs exist 
+}
+async function cleanUpAfter() {
+  //TODO: clean up after running script big images in './imgs'
+}
 //$ node test.js 'C:\z\imageScript\imgs'
