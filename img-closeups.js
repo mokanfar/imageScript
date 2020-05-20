@@ -8,7 +8,7 @@ import { default as imagemin } from "imagemin";
 import { default as imageminMozjpeg } from "imagemin-mozjpeg";
 
 let argv = minimist(process.argv.slice(2));
-let __QUALITY__ = argv.quality ? argv.quality : 80;
+let __QUALITY__ = argv.quality ? argv.quality : 70;
 let justMinify = argv._.includes('minify') ? true : false;
 let imagePath = './imgs';
 let outputDir = justMinify ? "./" : "./rez/";
@@ -19,7 +19,7 @@ process.chdir(imagePath);
 Promise.all([
   //cleanUpBefore(),
   makeDir(),
-  resize().then(_=>minify())//.then(_=>cleanUpAfter())
+  resize().then(_=>minify()).then(_=>cleanUpAfter())
   ]).then(_=>console.log('DONE'));
 
 async function cleanUpBefore() {
@@ -63,7 +63,7 @@ async function resize() {
       for (let img of files) {
         var dims = sizeOf(img);
         let settings =
-          dims.height > dims.width ? { height: 1400 } : { width: 2500 };
+          dims.height > dims.width ? { height: 1100 } : { width: 1400 };
         await sharp(img)
           .resize({
             ...settings,
