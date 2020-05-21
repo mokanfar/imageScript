@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as path from "path";
 import { promises as fs } from "fs";
 import { default as minimist } from "minimist";
@@ -8,25 +9,46 @@ import { default as imagemin } from "imagemin";
 import { default as imageminMozjpeg } from "imagemin-mozjpeg";
 
 let argv = minimist(process.argv.slice(2));
-let __QUALITY__ = argv.quality ? argv.quality : 80;
-let justMinify = argv._.includes('minify') ? true : false;
+
+let __QUALITY__ = typeof argv.quality == 'number' ? argv.quality : 80;
+let __CLOSEUPS__ = argv.quality == 'closeups'
+let __RESIZED__ = (argv.quality == 'closeups' || !argv.quality)
+let resHeight = __CLOSEUPS__ ? 1000 : 1400;
+let resWidth = __CLOSEUPS__ ? 1400 : 2500;
+
 let imagePath = './imgs';
-let outputDir = justMinify ? "./" : "./rez/";
+
+switch(argv.quality) {
+  case 90:
+   imagePath = imagePath.concat('/90')
+    break;
+  case 80:
+    imagePath = imagePath.concat('/80')
+    break;
+  case 70:
+    imagePath = imagePath.concat('/70')
+    break;
+  case 'closeups':
+    imagePath = imagePath.concat('/closeups')
+    break;
+  default:
+  imagePath = imagePath.concat('/resmin')
+}
+
+let outputDir = __RESIZED__ ? 'res' : '../done';
+
 let directoriesToDelete = [];
 process.chdir(imagePath);
 
 
 Promise.all([
-  //cleanUpBefore(),
+  cleanUpBefore(),
   makeDir(),
-  resize().then(_=>minify())//.then(_=>cleanUpAfter())
-  ]).then(_=>console.log('DONE'));
+  resize().then(_=>minify()).then(_=>cleanUpAfter())
+  ]).then(_=> process.exit(0));
 
 async function cleanUpBefore() {
-   let dirs = await listFiles(".").then(data => data.dirs);
-    for(let dir of await dirs) {
-       rimraf.sync(dir);
-    }
+   rimraf.sync("../done");
 }
 
 async function listFiles(directory) {
@@ -43,32 +65,43 @@ async function listFiles(directory) {
 async function cleanUpAfter() {
 let files = await listFiles(".").then(data => data.files);
  try {
+
+   if(__RESIZED__) {
+    process.chdir('../');
+    rimraf.sync("res");
+  }  
+
   for(const file of await files) {
     await fs.unlink("./" + file);
-  }    
+  }
+
  } catch (e) {}
 }
 
 async function makeDir() {
     //await console.log('making dir ', outputDir);
     try {
-    await fs.mkdir(outputDir);
+    await fs.mkdir("../done");
     } catch (e) {}
 }
 
 async function resize() {
-  if(!justMinify) {
+  if(typeof argv.quality !== 'number') {
+
     let files = await listFiles(".").then(data => data.files);
+
     try {
+      await fs.mkdir("res");
       for (let img of files) {
         var dims = sizeOf(img);
-        let settings =
-          dims.height > dims.width ? { height: 1400 } : { width: 2500 };
+      
+        let settings = dims.height > dims.width ? { height: resHeight } : { width: resWidth };
+       
         await sharp(img)
           .resize({
             ...settings,
           })
-          .toFile(outputDir + img)
+          .toFile(outputDir + '/' + img)
           // .then(_=>console.log('finished resizing'));
       }
     } catch (error) {}
@@ -76,9 +109,16 @@ async function resize() {
 }
 
 async function minify() {
+  
+    if(__RESIZED__) {
+      process.chdir(outputDir);  
+      outputDir = "../../done"
+    }
+
+  
   try {
-    await imagemin([outputDir + "*.jpg"], {
-      destination: outputDir + "minified",
+    await imagemin(["*.jpg"], {
+      destination: outputDir,
       plugins: [imageminMozjpeg({ quality: __QUALITY__ })],
     })
     // .then(_=>console.log('finished minifying'));
